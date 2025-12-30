@@ -1,0 +1,13 @@
+kind: wasmer.io/App.v0
+name: LALS
+owner: rudushi4
+package: .
+source: .
+commands:
+  start: python -m src.main
+version: 1.0.0
+entrypoint: wasmer/python
+description: LALS Multi-API Gateway - Dual protocol support for OpenAI and Anthropic
+environment:
+  PYTHONUNBUFFERED: '1'
+app_id: da_RMMIrt4UmMZN
