@@ -11,6 +11,52 @@ from functools import lru_cache
 from pydantic import BaseModel, Field
 
 
+class DatabaseConfig(BaseModel):
+    """Database configuration settings."""
+    
+    host: str = Field(
+        default="localhost",
+        description="Database host address"
+    )
+    port: int = Field(
+        default=5432,
+        ge=1,
+        le=65535,
+        description="Database port"
+    )
+    name: str = Field(
+        default="lals_db",
+        description="Database name"
+    )
+    username: str = Field(
+        default="",
+        description="Database username"
+    )
+    password: str = Field(
+        default="",
+        description="Database password"
+    )
+    enabled: bool = Field(
+        default=False,
+        description="Enable database connection"
+    )
+    
+    @property
+    def connection_string(self) -> str:
+        """Get database connection string."""
+        if self.username and self.password:
+            return f"postgresql://{self.username}:{self.password}@{self.host}:{self.port}/{self.name}"
+        elif self.username:
+            return f"postgresql://{self.username}@{self.host}:{self.port}/{self.name}"
+        else:
+            return f"postgresql://{self.host}:{self.port}/{self.name}"
+    
+    @property
+    def is_configured(self) -> bool:
+        """Check if database is properly configured."""
+        return bool(self.host and self.enabled)
+
+
 class ModelConfig(BaseModel):
     """Model configuration settings."""
     
@@ -147,10 +193,18 @@ class Config(BaseModel):
         default_factory=ServerConfig,
         description="Server configuration"
     )
+    database: DatabaseConfig = Field(
+        default_factory=DatabaseConfig,
+        description="Database configuration"
+    )
     
     @classmethod
     def from_env(cls) -> "Config":
         """Create configuration from environment variables."""
+        # Check if database is configured via environment
+        db_host = os.environ.get("DB_HOST")
+        db_enabled = bool(db_host)
+        
         return cls(
             model=ModelConfig(
                 path=os.environ.get("MODEL_PATH", ModelConfig().path),
@@ -179,6 +233,14 @@ class Config(BaseModel):
                 reload=os.environ.get("RELOAD", str(ServerConfig().reload)).lower() == "true",
                 log_level=os.environ.get("LOG_LEVEL", ServerConfig().log_level),
                 log_format=os.environ.get("LOG_FORMAT", ServerConfig().log_format),
+            ),
+            database=DatabaseConfig(
+                host=os.environ.get("DB_HOST", DatabaseConfig().host),
+                port=int(os.environ.get("DB_PORT", DatabaseConfig().port)),
+                name=os.environ.get("DB_NAME", DatabaseConfig().name),
+                username=os.environ.get("DB_USERNAME", DatabaseConfig().username),
+                password=os.environ.get("DB_PASSWORD", DatabaseConfig().password),
+                enabled=db_enabled,
             ),
         )
 
