@@ -3,10 +3,15 @@ Model Engine Module
 ====================
 Handles LLM model loading and inference operations.
 Supports both synchronous and streaming generation.
+Includes automatic model download from MODEL_URL if model file is missing.
 """
 
 import asyncio
 import logging
+import os
+import urllib.request
+import hashlib
+from pathlib import Path
 from typing import Optional, AsyncIterator, Dict, Any
 from contextlib import contextmanager
 
@@ -18,6 +23,81 @@ logger = logging.getLogger(__name__)
 
 # Global model instance
 _model_instance: Optional[Llama] = None
+
+
+def download_file(url: str, dest_path: Path, expected_hash: Optional[str] = None) -> bool:
+    """
+    Download a file from a URL with progress logging.
+    
+    Args:
+        url: URL to download from
+        dest_path: Destination file path
+        expected_hash: Optional SHA256 hash to verify download
+    
+    Returns:
+        True if download successful, False otherwise
+    """
+    dest_path.parent.mkdir(parents=True, exist_ok=True)
+    
+    logger.info(f"Downloading model from: {url}")
+    logger.info(f"Destination: {dest_path}")
+    
+    try:
+        # Set up request with headers to simulate browser
+        req = urllib.request.Request(
+            url,
+            headers={
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                'Accept': 'application/octet-stream,*/*',
+            }
+        )
+        
+        with urllib.request.urlopen(req, timeout=300) as response:
+            total_size = int(response.headers.get('Content-Length', 0))
+            logger.info(f"Model size: {total_size / (1024*1024):.1f} MB")
+            
+            downloaded = 0
+            chunk_size = 8192
+            
+            with open(dest_path, 'wb') as f:
+                while True:
+                    chunk = response.read(chunk_size)
+                    if not chunk:
+                        break
+                    
+                    downloaded += len(chunk)
+                    f.write(chunk)
+                    
+                    # Log progress every 10%
+                    if total_size > 0:
+                        percent = (downloaded / total_size) * 100
+                        if percent > 0 and int(percent) % 10 == 0:
+                            logger.info(f"Downloaded: {percent:.0f}% ({downloaded / (1024*1024):.1f} MB)")
+        
+        # Verify hash if provided
+        if expected_hash:
+            logger.info("Verifying model file hash...")
+            sha256_hash = hashlib.sha256()
+            with open(dest_path, "rb") as f:
+                for chunk in iter(lambda: f.read(8192), b""):
+                    sha256_hash.update(chunk)
+            actual_hash = sha256_hash.hexdigest()
+            
+            if actual_hash != expected_hash:
+                logger.error(f"Hash mismatch! Expected {expected_hash}, got {actual_hash}")
+                dest_path.unlink()
+                return False
+            logger.info("Model file hash verified successfully")
+        
+        file_size = dest_path.stat().st_size / (1024 * 1024)
+        logger.info(f"Model downloaded successfully: {dest_path} ({file_size:.1f} MB)")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Failed to download model: {e}")
+        if dest_path.exists():
+            dest_path.unlink()
+        return False
 
 
 class ModelEngine:
@@ -40,10 +120,34 @@ class ModelEngine:
         self._lock = asyncio.Lock()
     
     def load(self) -> None:
-        """Load the model into memory."""
+        """Load the model into memory. Downloads model if not present."""
         if self._model is not None:
             logger.warning("Model already loaded, skipping reload")
             return
+        
+        model_path = Path(self.config.path)
+        
+        # Check if model file exists
+        if not model_path.exists():
+            # Check for MODEL_URL environment variable
+            model_url = os.environ.get("MODEL_URL")
+            
+            if model_url:
+                logger.info("Model file not found, attempting download from MODEL_URL")
+                if download_file(model_url, model_path):
+                    logger.info("Model download complete, proceeding with load")
+                else:
+                    raise RuntimeError(
+                        f"Model file not found and download failed. "
+                        f"Please ensure {model_path} exists or MODEL_URL is accessible."
+                    )
+            else:
+                raise RuntimeError(
+                    f"Model file not found at {model_path}. "
+                    f"Please either:\n"
+                    f"  1. Place the model file at {model_path}\n"
+                    f"  2. Set the MODEL_URL environment variable"
+                )
         
         logger.info(f"Loading model from: {self.config.path}")
         logger.info(f"Context size: {self.config.n_ctx}")
