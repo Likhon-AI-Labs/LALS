@@ -299,13 +299,29 @@ class ModelEngine:
 
 # Global model engine instance
 _engine: Optional[ModelEngine] = None
+_model_loading = False
 
 
-def get_model_engine() -> ModelEngine:
-    """Get the global model engine instance."""
-    global _engine
+def get_model_engine(auto_load: bool = True) -> ModelEngine:
+    """Get the global model engine instance, optionally loading the model if needed."""
+    global _engine, _model_loading
+    
     if _engine is None:
         _engine = ModelEngine()
+    
+    # Auto-load model if not loaded and auto_load is True
+    if auto_load and not _engine.is_loaded and not _model_loading:
+        _model_loading = True
+        try:
+            logger.info("Auto-loading model on first request...")
+            _engine.load()
+            logger.info("Model loaded successfully!")
+        except Exception as e:
+            logger.error(f"Failed to auto-load model: {e}")
+            _model_loading = False
+            raise
+        _model_loading = False
+    
     return _engine
 
 

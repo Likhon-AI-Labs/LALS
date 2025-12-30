@@ -54,15 +54,10 @@ async def lifespan(app: FastAPI):
     logger.info(f"Context size: {config.model.n_ctx}")
     logger.info(f"Threads: {config.model.n_threads}")
     
-    # Initialize model
-    try:
-        initialize_model_engine(config.model)
-        logger.info("Model loaded successfully!")
-        logger.info(f"LALS v2.0.0 - Multi-API Gateway ready")
-        logger.info(f"Listening on http://{config.server.host}:{config.server.port}")
-    except Exception as e:
-        logger.error(f"Failed to load model: {e}")
-        raise
+    # Note: Model will be loaded lazily on first request
+    # This allows the app to start quickly even if model download is needed
+    logger.info("LALS v2.0.2 - Multi-API Gateway starting (model loads on first request)")
+    logger.info(f"Listening on http://{config.server.host}:{config.server.port}")
     
     yield
     
@@ -166,7 +161,7 @@ async def root():
 async def health_check():
     """Health check endpoint."""
     try:
-        engine = get_model_engine()
+        engine = get_model_engine(auto_load=False)
         if engine and engine.is_loaded:
             return {
                 "status": "healthy",
@@ -178,10 +173,10 @@ async def health_check():
                 }
             }
         else:
-            return JSONResponse(
-                status_code=503,
-                content={"status": "unhealthy", "reason": "Model not loaded"}
-            )
+            return {
+                "status": "initializing",
+                "message": "Model not yet loaded, will load on first request"
+            }
     except Exception as e:
         return JSONResponse(
             status_code=503,
