@@ -14,3 +14,10 @@ port = 8080
 
 [build]
 command = "pip install -r requirements.txt"
+
+[[namespace]]
+name = "rudushi4"
+
+[namespace.app]
+name = "LALS"
+
