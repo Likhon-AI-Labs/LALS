@@ -1,0 +1,16 @@
+name = "lals-multi-api-gateway"
+version = "2.0.0"
+description = "LALS Multi-API Gateway - Dual protocol support for OpenAI and Anthropic"
+
+[deployment]
+deployment = "wasmer-edge"
+
+[dependencies]
+wasmer = "4.3.0"
+
+[package]
+host = "0.0.0.0"
+port = 8080
+
+[build]
+command = "pip install -r requirements.txt"
