@@ -1,7 +1,7 @@
 [package]
 name = "rudushi4/lals-multi-api-gateway"
-version = "2.0.2"
-description = "LALS Multi-API Gateway v2.0 with PostgreSQL database support, automatic model download, and dual OpenAI/Anthropic protocol support"
+version = "2.0.3"
+description = "LALS Multi-API Gateway v2.0.3 with lazy model loading for faster startup, PostgreSQL support, and dual protocol support"
 host = "0.0.0.0"
 port = 8080
 
