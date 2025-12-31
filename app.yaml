@@ -5,9 +5,9 @@ package: .
 source: .
 commands:
   start: python -m src.main
-version: 2.0.3
+version: 2.0.4
 entrypoint: wasmer/python
-description: LALS Multi-API Gateway v2.0.3 - Lazy loading, PostgreSQL support, dual protocol
+description: LALS Multi-API Gateway v2.0.4 - Lazy loading, PostgreSQL support, dual protocol
 environment:
   PYTHONUNBUFFERED: '1'
   MODEL_PATH: ./models/qwen3-0.6b-q4_k_m.gguf
