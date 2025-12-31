@@ -13,7 +13,7 @@ Main Features:
 - Qwen3-0.6B model (Q4_K_M quantized)
 
 Author: Likhon AI Labs
-Version: 2.0.0
+Version: 2.0.4
 """
 
 import os
@@ -25,15 +25,24 @@ from typing import Optional
 # Add src to path for imports
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from fastapi import FastAPI, HTTPException, Request
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+# Try importing dependencies and log errors if missing
+try:
+    from fastapi import FastAPI, HTTPException, Request
+    from fastapi.middleware.cors import CORSMiddleware
+    from fastapi.responses import JSONResponse
+except ImportError as e:
+    print(f"Fatal error: Failed to import FastAPI: {e}")
+    sys.exit(1)
 
-from core.config import get_config, Config
-from core.model import get_model_engine, shutdown_model_engine
-from routers.openai_routes import router as openai_router
-from routers.anthropic_routes import router as anthropic_router
-from routers.universal_routes import router as universal_router
+try:
+    from core.config import get_config, Config
+    from core.model import get_model_engine, shutdown_model_engine
+    from routers.openai_routes import router as openai_router
+    from routers.anthropic_routes import router as anthropic_router
+    from routers.universal_routes import router as universal_router
+except ImportError as e:
+    print(f"Fatal error: Failed to import application modules: {e}")
+    sys.exit(1)
 
 # Configure logging
 logging.basicConfig(
@@ -49,15 +58,19 @@ async def lifespan(app: FastAPI):
     logger.info("Starting LALS Multi-API Gateway...")
     
     # Load configuration
-    config = get_config()
-    logger.info(f"Model path: {config.model.path}")
-    logger.info(f"Context size: {config.model.n_ctx}")
-    logger.info(f"Threads: {config.model.n_threads}")
+    try:
+        config = get_config()
+        logger.info(f"Model path: {config.model.path}")
+        logger.info(f"Context size: {config.model.n_ctx}")
+        logger.info(f"Threads: {config.model.n_threads}")
+        logger.info("LALS v2.0.4 - Multi-API Gateway starting")
+        logger.info(f"Listening on http://{config.server.host}:{config.server.port}")
+    except Exception as e:
+        logger.error(f"Failed to load configuration: {e}")
+        raise
     
     # Note: Model will be loaded lazily on first request
-    # This allows the app to start quickly even if model download is needed
-    logger.info("LALS v2.0.3 - Multi-API Gateway starting (model loads on first request)")
-    logger.info(f"Listening on http://{config.server.host}:{config.server.port}")
+    logger.info("Model will be loaded on first request (lazy loading)")
     
     yield
     
@@ -76,7 +89,7 @@ app = FastAPI(
         "capabilities through a transformer-based architecture optimized for "
         "lower latency and efficient token processing."
     ),
-    version="2.0.0",
+    version="2.0.4",
     lifespan=lifespan,
     docs_url="/docs",
     redoc_url="/redoc",
@@ -135,7 +148,7 @@ async def root():
     """Root endpoint - returns service information."""
     return {
         "service": "LALS - Likhon Advanced Language System",
-        "version": "2.0.0",
+        "version": "2.0.4",
         "model": "Qwen3-0.6B-Q4_K_M",
         "architecture": "Transformer-based, multi-protocol API gateway",
         "capabilities": ["NLU", "Content Generation", "Code Assistance"],
@@ -153,7 +166,8 @@ async def root():
             "POST /v1/messages": "Claude messages (Anthropic)",
             "POST /v1/complete": "Legacy completion (Anthropic)",
             "POST /v1/inference": "Auto-detected routing"
-        }
+        },
+        "note": "Model loads on first request (lazy loading)"
     }
 
 
