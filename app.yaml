@@ -5,9 +5,18 @@ package: .
 source: .
 commands:
   start: python -m src.main
-version: 1.0.0
+version: 2.0.3
 entrypoint: wasmer/python
-description: LALS Multi-API Gateway - Dual protocol support for OpenAI and Anthropic
+description: LALS Multi-API Gateway v2.0.3 - Lazy loading, PostgreSQL support, dual protocol
 environment:
   PYTHONUNBUFFERED: '1'
+  MODEL_PATH: ./models/qwen3-0.6b-q4_k_m.gguf
+  MODEL_N_CTX: '2048'
+  MODEL_N_THREADS: '4'
+  HOST: '0.0.0.0'
+  PORT: '8080'
+  LOG_LEVEL: 'INFO'
+  ENABLE_OPENAI_API: 'true'
+  ENABLE_ANTHROPIC_API: 'true'
+  ENABLE_UNIVERSAL_ROUTER: 'true'
 app_id: da_RMMIrt4UmMZN
