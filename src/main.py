@@ -30,7 +30,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from core.config import get_config, Config
-from core.model import initialize_model_engine, shutdown_model_engine, get_model_engine
+from core.model import get_model_engine, shutdown_model_engine
 from routers.openai_routes import router as openai_router
 from routers.anthropic_routes import router as anthropic_router
 from routers.universal_routes import router as universal_router
@@ -56,7 +56,7 @@ async def lifespan(app: FastAPI):
     
     # Note: Model will be loaded lazily on first request
     # This allows the app to start quickly even if model download is needed
-    logger.info("LALS v2.0.2 - Multi-API Gateway starting (model loads on first request)")
+    logger.info("LALS v2.0.3 - Multi-API Gateway starting (model loads on first request)")
     logger.info(f"Listening on http://{config.server.host}:{config.server.port}")
     
     yield

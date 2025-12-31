@@ -15,7 +15,12 @@ from pathlib import Path
 from typing import Optional, AsyncIterator, Dict, Any
 from contextlib import contextmanager
 
-from llama_cpp import Llama
+try:
+    from llama_cpp import Llama
+    LLAMA_CPP_AVAILABLE = True
+except ImportError:
+    Llama = None
+    LLAMA_CPP_AVAILABLE = False
 
 from .config import get_config, ModelConfig
 
@@ -152,6 +157,12 @@ class ModelEngine:
         logger.info(f"Loading model from: {self.config.path}")
         logger.info(f"Context size: {self.config.n_ctx}")
         logger.info(f"Threads: {self.config.n_threads}")
+        
+        if not LLAMA_CPP_AVAILABLE:
+            raise RuntimeError(
+                "llama-cpp-python is not available. "
+                "Please ensure it is installed correctly in the deployment environment."
+            )
         
         self._model = Llama(
             model_path=self.config.path,
